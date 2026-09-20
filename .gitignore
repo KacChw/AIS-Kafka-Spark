@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+
+.env
+
+data/output/
+data/_checkpoint/
+
+.idea/
+.vscode/
+
+*.log
