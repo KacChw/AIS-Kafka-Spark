@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import json
-from typing import Any
-
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
@@ -29,9 +26,24 @@ def run_consumer(settings: Settings) -> None:
         .load()
     )
 
-    parsed = df.select(
-        F.from_json(F.decode(F.col("value"), "utf-8"), "feed_timestamp LONG, records ARRAY<STRUCT<id STRING, timestamp LONG, trip_id STRING, route_id STRING, vehicle_id STRING, latitude DOUBLE, longitude DOUBLE, bearing DOUBLE, speed DOUBLE, current_stop_sequence INT, occupancy_status INT, status INT, is_deleted BOOLEAN, schedule_relationship INT>>").alias("data")
+    record_schema = (
+        "feed_timestamp LONG, records ARRAY<STRUCT<id STRING, timestamp LONG, "
+        "trip_id STRING, route_id STRING, vehicle_id STRING, latitude DOUBLE, "
+        "longitude DOUBLE, bearing DOUBLE, speed DOUBLE, "
+        "current_stop_sequence INT, occupancy_status INT, status INT, "
+        "is_deleted BOOLEAN, schedule_relationship INT>>"
+    )
+    feed = df.select(
+        F.from_json(F.decode(F.col("value"), "utf-8"), record_schema).alias("data")
     ).select("data.*")
+    parsed = (
+        feed.select(
+            "feed_timestamp",
+            F.explode("records").alias("vehicle"),
+        )
+        .select("feed_timestamp", "vehicle.*")
+        .withColumn("event_time", F.to_timestamp(F.from_unixtime("timestamp")))
+    )
 
     query = (
         parsed.writeStream.outputMode("append")

@@ -7,8 +7,8 @@ To jest przykład projektu data engineering do pobierania i przetwarzania danych
 - pobieranie danych o położeniu pojazdów i aktualizacjach tras,
 - publikacja danych do Kafka,
 - przetwarzanie strumieniowe w Spark,
-- zapis wyników do formatu parquet,
-- przygotowanie podstaw do dalszej analityki i modelowania.
+- zapis wyników do formatu Parquet,
+- dashboard ze statystykami i wizualizacją pozycji.
 
 ## Architektura
 
@@ -16,15 +16,16 @@ To jest przykład projektu data engineering do pobierania i przetwarzania danych
 GTFS Realtime API
         |
         v
-Python Producer -> Kafka -> Spark Structured Streaming -> Parquet / Lakehouse
+Python Producer -> Kafka -> Spark Structured Streaming -> Parquet -> Streamlit Dashboard
 ```
 
 ## Główne komponenty
 
 - `main.py` – punkt wejścia do uruchamiania producenta lub konsumenta,
+- `dashboard.py` – dashboard ze statystykami i wykresami na podstawie zapisanych danych,
 - `src/gtfs_realtime_client.py` – pobieranie i normalizacja danych z feedu GTFS,
 - `src/kafka_producer.py` – wysyłka danych do Kafka,
-- `src/spark_consumer.py` – odczyt strumieniowy z Kafka i zapis do Parquet,
+- `src/spark_consumer.py` – odczyt strumieniowy z Kafka i zapis jednego wiersza Parquet na pojazd,
 - `docker-compose.yml` – środowisko Kafka + ZooKeeper,
 - `.env.example` – przykładowa konfiguracja środowiska.
 
@@ -39,7 +40,7 @@ Python Producer -> Kafka -> Spark Structured Streaming -> Parquet / Lakehouse
 
 ```bash
 python -m venv .venv
-.venv\Scripts\activate
+.venv\\Scripts\\activate
 pip install -r requirements.txt
 ```
 
@@ -47,8 +48,8 @@ pip install -r requirements.txt
 
 Skopiuj plik `.env.example` do `.env` i uzupełnij adres API GTFS.
 
-```bash
-copy .env.example .env
+```powershell
+Copy-Item .env.example .env
 ```
 
 Przykładowe parametry:
@@ -60,23 +61,34 @@ KAFKA_TOPIC=gtfs.realtime
 SPARK_OUTPUT_PATH=./data/output
 ```
 
-## Uruchomienie Kafka
+## Uruchomienie
+
+Uruchom Kafka:
 
 ```bash
 docker compose up -d
 ```
 
-## Uruchomienie producenta
+Uruchom producenta i konsumenta Spark w osobnych terminalach:
 
 ```bash
 python main.py --mode producer
-```
-
-## Uruchomienie konsumenta Spark
-
-```bash
 python main.py --mode consumer
 ```
+
+Uruchom dashboard w kolejnym terminalu:
+
+```bash
+streamlit run dashboard.py
+```
+
+Dashboard odświeża dane co 10 sekund i pokazuje:
+
+- liczbę pojazdów i tras z najnowszego snapshotu,
+- średnią i maksymalną prędkość z najnowszego snapshotu (km/h; feed GTFS podaje m/s),
+- łączną liczbę zapisanych obserwacji,
+- liczbę pojazdów oraz średnią prędkość w czasie,
+- pozycje pojazdów na mapie OpenStreetMap.
 
 ## Przykładowy rekord danych
 
@@ -100,7 +112,7 @@ python main.py --mode consumer
 2. dodać dane o przystankach i trasach z GTFS Static,
 3. zbudować model opóźnień i odległości do przystanków,
 4. dodać walidację jakości danych i alerty,
-5. zapisać wyniki do lakehouse / warehouse / delta table.
+5. zapisać wyniki do lakehouse / warehouse / Delta table.
 
 ## Przykładowe źródła GTFS Realtime
 
